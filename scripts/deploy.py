@@ -89,7 +89,7 @@ def deploy():
   ## Sushiswap MATIC => WETH => WBTC
   router = Contract.from_explorer("0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506")
   router.swapETHForExactTokens(
-    1e8, # 1 WBTC
+    0.1e8, # 0.1 WBTC
     [WMATIC, WETH, WANT],
     deployer,
     9999999999999999,

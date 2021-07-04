@@ -4,7 +4,7 @@ networks:
   default: polygon-main-fork
   polygon-main-fork:
     cmd_settings:
-      default_balance: 1000000
+      default_balance: 100000
 
 # automatically fetch contract sources from Etherscan
 autofetch_sources: True
