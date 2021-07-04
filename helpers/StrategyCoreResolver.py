@@ -223,16 +223,18 @@ class StrategyCoreResolver:
                     1,
                 )
 
-        # The total want between the strategy and sett should be less after than before
-        # if there was previous want in strategy or sett (sometimes we withdraw entire
-        # balance from the strategy pool) which we check above.
-        if (
-            before.balances("want", "strategy") > 0
-            or before.balances("want", "sett") > 0
-        ):
-            assert after.balances("want", "strategy") + after.balances(
-                "want", "sett"
-            ) < before.balances("want", "strategy") + before.balances("want", "sett")
+        # NOTE: Removed this check since the amount of want that'll be liquidated by the strategy
+        #       might be more than the amount needed, resulting in leftover want.
+        # # The total want between the strategy and sett should be less after than before
+        # # if there was previous want in strategy or sett (sometimes we withdraw entire
+        # # balance from the strategy pool) which we check above.
+        # if (
+        #     before.balances("want", "strategy") > 0
+        #     or before.balances("want", "sett") > 0
+        # ):
+        #     assert after.balances("want", "strategy") + after.balances(
+        #         "want", "sett"
+        #     ) < before.balances("want", "strategy") + before.balances("want", "sett")
 
         # Controller rewards should earn
         if (
