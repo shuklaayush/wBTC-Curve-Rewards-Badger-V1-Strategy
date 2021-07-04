@@ -3,7 +3,7 @@ name: Test
 on:
   push:
     branches:
-    - master
+    - main
     - develop
   pull_request:
 
@@ -46,19 +46,19 @@ jobs:
       with:
         path: |
           ${{ steps.pip-cache-dir-path.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
         restore-keys: |
-          ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
+          ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           ${{ runner.os }}-pip-
 
     - name: Install python dependencies
-      run: pip install -r requirements-dev.txt
+      run: pip install -r requirements.txt
 
     - name: Compile Code
       run: brownie compile --size
 
     - name: Run Tests
       env:
-        ETHERSCAN_TOKEN: MW5CQA6QK5YMJXP2WP3RA36HM5A7RA1IHA
-        WEB3_INFURA_PROJECT_ID: b7821200399e4be2b4e5dbdf06fbe85b
+        POLYGONSCAN_TOKEN: HMDHSQ4JA37W4F2DNTXP951BSCHAE7TZAU
+        WEB3_INFURA_PROJECT_ID: 969c6bc8a4574bacb699f8cb67cde8eb
       run: brownie test
