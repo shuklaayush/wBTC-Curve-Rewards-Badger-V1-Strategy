@@ -9,8 +9,8 @@ class StrategyResolver(StrategyCoreResolver):
             Specifies extra check for ordinary operation on withdrawal
             Use this to verify that balances in the get_strategy_destinations are properly set
         """
-        ## Pool will send funds from crvToken
-        ## crvToken sends funds to AAVE WBTC pool
+        ## Pool will send funds from crvTokenGauge
+        ## crvTokenGauge sends funds to AAVE WBTC pool
         assert after.balances("want", "amWBTC") < before.balances("want", "amWBTC")
 
     def hook_after_confirm_deposit(self, before, after, params):
@@ -26,8 +26,8 @@ class StrategyResolver(StrategyCoreResolver):
             Specifies extra check for ordinary operation on earn
             Use this to verify that balances in the get_strategy_destinations are properly set
         """
-        ## Pool will send funds to crvToken during earn
-        ## crvToken sends funds to AAVE WBTC pool
+        ## Pool will send funds to crvTokenGauge during earn
+        ## crvTokenGauge sends funds to AAVE WBTC pool
         assert after.balances("want", "amWBTC") > before.balances("want", "amWBTC")
 
     def confirm_harvest(self, before, after, tx):
@@ -90,7 +90,7 @@ class StrategyResolver(StrategyCoreResolver):
         # E.G
         strategy = self.manager.strategy
         return {
-            "crvToken": strategy.crvToken(),
+            "crvTokenGauge": strategy.crvTokenGauge(),
             "curvePool": strategy.CURVE_POOL(),
             "amWBTC": "0x5c2ed810328349100A66B82b78a1791B101C9D61"
         }

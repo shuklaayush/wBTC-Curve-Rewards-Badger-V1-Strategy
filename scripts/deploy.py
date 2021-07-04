@@ -5,7 +5,8 @@ from config import (
   LP_COMPONENT,
   REWARD_TOKEN,
   PROTECTED_TOKENS,
-  FEES
+  FEES,
+  PRICE_FEEDS
 )
 from dotmap import DotMap
 
@@ -69,7 +70,8 @@ def deploy():
     keeper,
     guardian,
     PROTECTED_TOKENS,
-    FEES
+    FEES,
+    PRICE_FEEDS
   )
 
   ## Tool that verifies bytecode (run independetly) <- Webapp for anyone to verify

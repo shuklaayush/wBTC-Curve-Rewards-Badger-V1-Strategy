@@ -9,6 +9,10 @@ interface IRewardsOnlyGauge {
 
     function totalSupply() external view returns (uint256);
 
+    function lp_token() external view returns (address);
+
+    function reward_tokens(uint256) external view returns (address);
+
     function withdraw(uint256) external;
 
     function claimed_reward(address _addr, address _token)
@@ -25,9 +29,5 @@ interface IRewardsOnlyGauge {
 
     function claim_rewards(address) external;
 
-    function reward_tokens(uint256) external view returns (address);
-
     function last_claim() external view returns (uint256);
-
-    function reward_data() external view returns (uint256);
 }
