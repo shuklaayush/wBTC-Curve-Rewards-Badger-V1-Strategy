@@ -1,5 +1,8 @@
 # Badger Strategy V1 Brownie Mix
 
+If KeyError: 'polygon-main-fork' => rm -r ~/.brownie
+Make sure master branch of brownie is installed.
+
 - Video Introduction: https://youtu.be/FVbhgPYW_D0
 
 - Example Project: https://github.com/Badger-Finance/wBTC-AAVE-Rewards-Farm-Badger-V1-Strategy

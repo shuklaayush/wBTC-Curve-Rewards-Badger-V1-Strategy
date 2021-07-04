@@ -9,6 +9,10 @@ from config import (
 )
 from dotmap import DotMap
 
+WMATIC = "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270"
+WETH = "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619"
+
+ROUTER = "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506" # Sushi Router
 
 def main():
   return deploy()
@@ -80,14 +84,14 @@ def deploy():
   controller.approveStrategy(WANT, strategy, {"from": governance})
   controller.setStrategy(WANT, strategy, {"from": deployer})
 
-  ## Uniswap some tokens here
-  router = Contract.from_explorer("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D")
-  router.swapExactETHForTokens(
-    0, ## Mint out
-    ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", WANT],
+  ## Sushiswap MATIC => WETH => WBTC
+  router = Contract.from_explorer("0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506")
+  router.swapETHForExactTokens(
+    1e8, # 1 WBTC
+    [WMATIC, WETH, WANT],
     deployer,
     9999999999999999,
-    {"from": deployer, "value": 5000000000000000000}
+    {"from": deployer, "value": deployer.balance()}
   )
 
   return DotMap(

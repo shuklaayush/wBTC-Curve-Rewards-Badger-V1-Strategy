@@ -1,6 +1,6 @@
 from brownie import *
 from helpers.constants import MaxUint256
-
+from helpers.time import hours
 
 def test_are_you_trying(deployer, sett, strategy, want):
   """
@@ -26,6 +26,7 @@ def test_are_you_trying(deployer, sett, strategy, want):
   sett.earn({"from": deployer})
 
   chain.mine(10000) # Mine so we get some interest
+  chain.sleep(hours(2)) # Sleep until rewards are claimable
 
   ## TEST 1: Does the want get used in any way?
   assert want.balanceOf(sett) == depositAmount - available
