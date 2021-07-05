@@ -1,36 +1,75 @@
 import brownie
 from brownie import *
-from helpers.constants import MaxUint256
-import pytest
+from helpers.constants import AddressZero, MaxUint256
+from helpers.time import hours
 
-"""
-  TODO: Put your tests here to prove the strat is good!
-  See test_harvest_flow, for the basic tests
-  See test_strategy_permissions, for tests at the permissions level
-"""
+def test_harvest_custom(want, deployer, vault, strategy, reward, wmatic):
+  balance = want.balanceOf(deployer)
+  wantDecimals = want.decimals()
 
-# @pytest.fixture
-# def aavePool():
-#   return Contract.from_explorer("0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9")
+  want.approve(vault, balance, {"from": deployer})
+  vault.deposit(balance, {"from": deployer})
+  vault.earn({"from": deployer})
 
-# @pytest.fixture
-# def aaveRewards():
-#   return Contract.from_explorer("0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5")
+  curvePool = Contract.from_explorer(strategy.CURVE_POOL())
+  crvTokenGauge = Contract.from_explorer(strategy.crvTokenGauge())
+
+  # Expected want in strategy based on virtual price
+  crvTokenBalance = crvTokenGauge.balanceOf(strategy)
+  virtualPrice = curvePool.get_virtual_price()
+  expectedWant = int(crvTokenBalance * virtualPrice / 10 ** (36 - wantDecimals))
+
+  assert strategy.balanceOfPool() == expectedWant
+
+  chain.sleep(hours(2))
+  chain.mine(500)
+
+  # Update rewards
+  crvTokenGauge.claimable_reward_write(strategy, strategy.reward(), {"from": deployer})
+
+  # If we deposited, then we must have some rewards
+  assert crvTokenGauge.claimable_reward(strategy, reward) > 0
+  assert crvTokenGauge.claimable_reward(strategy, wmatic) > 0
+
+  strategy.harvest({"from": deployer})
+
+  # Pending rewards should become zero after claiming
+  assert crvTokenGauge.claimable_reward(strategy, reward) == 0
+  assert crvTokenGauge.claimable_reward(strategy, wmatic) == 0
+  # Strategy should have some want after swapping rewards
+  assert strategy.balanceOfWant() > 0
+  assert strategy.isTendable()
+  # Strategy shouldn't have any rewards left
+  assert reward.balanceOf(strategy) == 0
+  assert wmatic.balanceOf(strategy) == 0
+
+  strategy.tend({"from": deployer})
+  # Strategy should re-deposit all extra want
+  assert strategy.balanceOfWant() == 0
 
 
-# def test_my_custom_test(want, deployer, vault, strategy, aavePool, aaveRewards):
-#   balance = want.balanceOf(deployer)
-#   want.approve(vault, balance, {"from": deployer})
-#   vault.deposit(balance, {"from": deployer})
-#   vault.earn({"from": deployer})
+def test_no_price_feed(want, deployer, vault, strategy, reward, wmatic):
+  balance = want.balanceOf(deployer)
+  randomUser = accounts[8]
 
-#   chain.sleep(15)
-#   chain.mine(500)
+  want.approve(vault, balance, {"from": deployer})
+  vault.deposit(balance, {"from": deployer})
+  vault.earn({"from": deployer})
 
-#   aToken = Contract.from_explorer(strategy.aToken())
+  chain.sleep(hours(2))
+  chain.mine(500)
 
-#   assert strategy.balanceOfPool() == aToken.balanceOf(strategy)
+  # Remove Chainlink price feed oracle
+  with brownie.reverts("onlyGovernanceOrStrategist"):
+      strategy.setPriceFeed(strategy.want(), AddressZero, {"from": randomUser})
 
-#   ## If we deposited, then we must have some rewards
+  strategy.setPriceFeed(strategy.want(), AddressZero, {"from": deployer})
 
-#   assert aaveRewards.getRewardsBalance([aToken], strategy) > 0
+  # Strategy should still harvest rewards and swap them into want
+  strategy.harvest({"from": deployer})
+
+  # Strategy should have some want after swapping rewards
+  assert strategy.balanceOfWant() > 0
+  # Strategy shouldn't have any rewards left
+  assert reward.balanceOf(strategy) == 0
+  assert wmatic.balanceOf(strategy) == 0

@@ -49,6 +49,14 @@ def strategy(deployed):
 def want(deployed):
   return deployed.want
 
+@pytest.fixture
+def reward(strategy):
+  return interface.IERC20(strategy.reward())
+
+@pytest.fixture
+def wmatic(strategy):
+  return interface.IERC20(strategy.WMATIC_TOKEN())
+
 ## Accounts ##
 
 @pytest.fixture
@@ -66,6 +74,3 @@ def settKeeper(vault):
 @pytest.fixture
 def strategyKeeper(strategy):
   return accounts.at(strategy.keeper(), force=True)
-
-
-      

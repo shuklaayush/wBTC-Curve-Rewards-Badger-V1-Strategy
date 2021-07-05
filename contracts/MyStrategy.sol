@@ -252,11 +252,6 @@ contract MyStrategy is BaseStrategy {
                 break;
             }
 
-            if (priceFeeds[tokenAddress] == address(0)) {
-                // No price feed for this token. Skip it.
-                continue;
-            }
-
             uint256 rewardAmount =
                 IERC20Upgradeable(tokenAddress).balanceOf(address(this));
             if (rewardAmount == 0) {
@@ -281,14 +276,28 @@ contract MyStrategy is BaseStrategy {
             path[0] = tokenAddress;
             path[1] = WETH_TOKEN;
             path[2] = want;
-            uint256 expectedWant =
-                _tokenToWantFromOracle(rewardAmount, tokenAddress);
-            IUniswapV2Router02(ROUTER).swapExactTokensForTokens(
-                rewardAmount,
-                _calcMinAmountFromSlippage(
+
+            uint256 minExpectedWant;
+            if (
+                priceFeeds[tokenAddress] != address(0) &&
+                priceFeeds[want] != address(0)
+            ) {
+                // Use price feed and account for slippage
+                uint256 expectedWant =
+                    _tokenToWantFromPriceFeed(rewardAmount, tokenAddress);
+                minExpectedWant = _calcMinAmountFromSlippage(
                     expectedWant,
                     SWAP_SLIPPAGE_TOLERANCE
-                ),
+                );
+            } else {
+                // No price feed for this token. Expect to get non-zero tokens and hope for the best.
+                // WARNING: SUSCEPTIBLE TO FRONTRUNNING
+                minExpectedWant = 0;
+            }
+
+            IUniswapV2Router02(ROUTER).swapExactTokensForTokens(
+                rewardAmount,
+                minExpectedWant,
                 path,
                 address(this),
                 now
@@ -386,7 +395,7 @@ contract MyStrategy is BaseStrategy {
     }
 
     /// @dev Converts balance of token to want using Chainlink price feed
-    function _tokenToWantFromOracle(uint256 _amount, address _tokenAddress)
+    function _tokenToWantFromPriceFeed(uint256 _amount, address _tokenAddress)
         internal
         view
         returns (uint256)

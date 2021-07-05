@@ -10,7 +10,7 @@ class StrategyResolver(StrategyCoreResolver):
             Use this to verify that balances in the get_strategy_destinations are properly set
         """
         ## Pool will send funds from crvTokenGauge
-        ## crvTokenGauge sends funds to AAVE WBTC pool
+        ## Want funds are kept in AAVE since crvTokenGauge sends funds to AAVE WBTC pool
         assert after.balances("want", "amWBTC") < before.balances("want", "amWBTC")
 
     def hook_after_confirm_deposit(self, before, after, params):
@@ -27,7 +27,7 @@ class StrategyResolver(StrategyCoreResolver):
             Use this to verify that balances in the get_strategy_destinations are properly set
         """
         ## Pool will send funds to crvTokenGauge during earn
-        ## crvTokenGauge sends funds to AAVE WBTC pool
+        ## Want funds are kept in AAVE since crvTokenGauge sends funds to AAVE WBTC pool
         assert after.balances("want", "amWBTC") > before.balances("want", "amWBTC")
 
     def confirm_harvest(self, before, after, tx):
@@ -92,7 +92,5 @@ class StrategyResolver(StrategyCoreResolver):
         return {
             "crvTokenGauge": strategy.crvTokenGauge(),
             "curvePool": strategy.CURVE_POOL(),
-            "amWBTC": "0x5c2ed810328349100A66B82b78a1791B101C9D61"
+            "amWBTC": "0x5c2ed810328349100A66B82b78a1791B101C9D61" # AAVE WBTC Lending Pool
         }
-
-        return {}
