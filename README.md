@@ -2,7 +2,7 @@
 
 ![Logo](https://user-images.githubusercontent.com/27727946/124469287-cb083b00-ddb7-11eb-934e-4ed6b25ac24f.png)
 
-Video: https://youtu.be/zmuH1VRoTeI
+**Video**: https://youtu.be/zmuH1VRoTeI
 
 This strategy will deposit wBTC on [Polygon Curve ren pool](https://polygon.curve.fi/ren) and stake the received btcCRV tokens in the Curve Liquidity Gauge to earn interest and CRV/wMATIC rewards.
 It will then claim the rewards, swap them into wBTC and compound the amount deposited.
@@ -62,18 +62,13 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Contracts
-
-Curve ren pool: [0xC2d95EEF97Ec6C17551d45e77B590dc1F9117C67](https://polygonscan.com/address/0xc2d95eef97ec6c17551d45e77b590dc1f9117c67#code)
-
-Sushi Router: [0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506](https://polygonscan.com/address/0x1b02da8cb0d097eb8d57a175b88c7d8b47997506#code)
-
-Chainlink CRV-ETH price feed: [0x1CF68C76803c9A415bE301f50E82e44c64B7F1D4](https://polygonscan.com/address/0x1cf68c76803c9a415be301f50e82e44c64b7f1d4#code)
-
-Chainlink wBTC-ETH price feed: [0xA338e0492B2F944E9F8C0653D3AD1484f2657a37](https://polygonscan.com/address/0xa338e0492b2f944e9f8c0653d3ad1484f2657a37#code)
-
 ## Notes
-A couple of extra tests have been added to [`tests/test_custom.py`](tests/test_custom.py) to test reward claiming and price feeds (or absence of price feeds). A few original tests have been slightly modified to account for peculiarities of Curve contracts. Run tests using:
+A couple of extra tests have been added to [`tests/test_custom.py`](tests/test_custom.py) to test reward claiming and price feeds (or absence of price feeds). A few original tests have been slightly modified to account for peculiarities of Curve contracts. View the diff between the template and this repo using:
+```
+git diff 60f2fcbfe7f0125e5af3109a4e4ac6b46939f7cd HEAD^
+```
+
+Run tests using:
 
 ```
 brownie test
@@ -91,6 +86,14 @@ Hence, while testing locally, let's say you deposit 1wBTC into the strategy, har
 However, since this strategy uses Curve pools for which the exact exchange rate between the btcCRV token and wBTC is unknown and can only be estimated using `get_virtual_price()`*, there's a possibility of liquidating some extra wBTC. This extra wBTC would remain leftover in the strategy after withdrawal.
 
 \* An alternative is to use `calc_withdraw_one_coin(...)` to get the exact amount of wBTC that one would receive after liquidating, but this is susceptible to front-running attacks and hence, not used.
+
+## Contracts
+
+This strategy interacts with the following contracts on Polygon Mainnet:
+* Curve ren pool: [0xC2d95EEF97Ec6C17551d45e77B590dc1F9117C67](https://polygonscan.com/address/0xc2d95eef97ec6c17551d45e77b590dc1f9117c67#code)
+* Sushi Router: [0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506](https://polygonscan.com/address/0x1b02da8cb0d097eb8d57a175b88c7d8b47997506#code)
+* Chainlink CRV-ETH price feed: [0x1CF68C76803c9A415bE301f50E82e44c64B7F1D4](https://polygonscan.com/address/0x1cf68c76803c9a415be301f50e82e44c64b7f1d4#code)
+* Chainlink wBTC-ETH price feed: [0xA338e0492B2F944E9F8C0653D3AD1484f2657a37](https://polygonscan.com/address/0xa338e0492b2f944e9f8c0653d3ad1484f2657a37#code)
 
 ## Known issues
 ### KeyError: 'polygon-main-fork'
