@@ -2,7 +2,7 @@
 
 ![Logo](https://user-images.githubusercontent.com/27727946/124469287-cb083b00-ddb7-11eb-934e-4ed6b25ac24f.png)
 
-Video: https://www.youtube.com/watch?v=XXX
+Video: https://youtu.be/zmuH1VRoTeI
 
 This strategy will deposit wBTC on [Polygon Curve ren pool](https://polygon.curve.fi/ren) and stake the received btcCRV tokens in the Curve Liquidity Gauge to earn interest and CRV/wMATIC rewards.
 It will then claim the rewards, swap them into wBTC and compound the amount deposited.
@@ -10,6 +10,8 @@ It will then claim the rewards, swap them into wBTC and compound the amount depo
 The strategy uses [Chainlink price feeds](https://docs.chain.link/docs/matic-addresses) to determine the current price of CRV and wMATIC tokens for swapping. This prevents front-running attacks.
 
 The swapping is done using [Sushi](https://sushi.com) through the CRV/wMATIC => wETH => wBTC path to ensure sufficient liquidity.
+
+![Chart](https://user-images.githubusercontent.com/27727946/124488648-b5057500-ddcd-11eb-9d10-ab3eb2b08c7a.png)
 
 ## Functions
 ### Deposit
@@ -26,12 +28,15 @@ If there's any wBTC in the strategy, deposit it in the pool.
 
 ## Expected Yield
 At the time of writing, the expected yields are:
-* Base APY of wBTC ren pool on Curve (1.16%)
+* Base APY of wBTC ren pool on Curve (2.4%)
 * Rewards on the wBTC Deposit:
-  * CRV rewards (4.67%)
-  * wMATIC rewards (7.50%)
+  * CRV rewards (3.85%)
+  * wMATIC rewards (6.18%)
 
-Giving a total expected yield of around 13.33% APY.
+Giving a total expected yield of around 12.43% APY.
+
+![Curve ren pool](https://user-images.githubusercontent.com/27727946/124488874-fc8c0100-ddcd-11eb-99c1-153d94fcaa60.png)
+
 
 ## Installation and Setup
 
