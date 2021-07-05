@@ -1,5 +1,7 @@
 # wBTC Curve Rewards Badger V1 Strategy
 
+![Logo](https://user-images.githubusercontent.com/27727946/124469287-cb083b00-ddb7-11eb-934e-4ed6b25ac24f.png)
+
 Video: https://www.youtube.com/watch?v=XXX
 
 This strategy will deposit wBTC on [Polygon Curve ren pool](https://polygon.curve.fi/ren) and stake the received btcCRV tokens in the Curve Liquidity Gauge to earn interest and CRV/wMATIC rewards.
