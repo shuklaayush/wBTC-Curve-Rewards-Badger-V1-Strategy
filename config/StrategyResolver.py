@@ -3,11 +3,12 @@ from rich.console import Console
 
 console = Console()
 
+
 class StrategyResolver(StrategyCoreResolver):
     def hook_after_confirm_withdraw(self, before, after, params):
         """
-            Specifies extra check for ordinary operation on withdrawal
-            Use this to verify that balances in the get_strategy_destinations are properly set
+        Specifies extra check for ordinary operation on withdrawal
+        Use this to verify that balances in the get_strategy_destinations are properly set
         """
         ## Pool will send funds from crvTokenGauge
         ## Want funds are kept in AAVE since crvTokenGauge sends funds to AAVE WBTC pool
@@ -15,16 +16,16 @@ class StrategyResolver(StrategyCoreResolver):
 
     def hook_after_confirm_deposit(self, before, after, params):
         """
-            Specifies extra check for ordinary operation on deposit
-            Use this to verify that balances in the get_strategy_destinations are properly set
+        Specifies extra check for ordinary operation on deposit
+        Use this to verify that balances in the get_strategy_destinations are properly set
         """
         ## Nothing specific during a deposit
         assert True
 
     def hook_after_earn(self, before, after, params):
         """
-            Specifies extra check for ordinary operation on earn
-            Use this to verify that balances in the get_strategy_destinations are properly set
+        Specifies extra check for ordinary operation on earn
+        Use this to verify that balances in the get_strategy_destinations are properly set
         """
         ## Pool will send funds to crvTokenGauge during earn
         ## Want funds are kept in AAVE since crvTokenGauge sends funds to AAVE WBTC pool
@@ -32,7 +33,7 @@ class StrategyResolver(StrategyCoreResolver):
 
     def confirm_harvest(self, before, after, tx):
         """
-            Verfies that the Harvest produced yield and fees
+        Verfies that the Harvest produced yield and fees
         """
         console.print("=== Compare Harvest ===")
         self.manager.printCompare(before, after)
@@ -61,7 +62,9 @@ class StrategyResolver(StrategyCoreResolver):
         assert after.get("strategy.balanceOf") >= before.get("strategy.balanceOf")
 
         # PPFS should not decrease
-        assert after.get("sett.pricePerFullShare") >= before.get("sett.pricePerFullShare")
+        assert after.get("sett.pricePerFullShare") >= before.get(
+            "sett.pricePerFullShare"
+        )
 
     def confirm_tend(self, before, after, tx):
         """
@@ -80,7 +83,9 @@ class StrategyResolver(StrategyCoreResolver):
         assert after.get("strategy.balanceOfWant") == 0
 
         ## Since tends invest let's ensure balance of pool has grown
-        assert after.get("strategy.balanceOfPool") > before.get("strategy.balanceOfPool")
+        assert after.get("strategy.balanceOfPool") > before.get(
+            "strategy.balanceOfPool"
+        )
 
     def get_strategy_destinations(self):
         """
@@ -92,5 +97,5 @@ class StrategyResolver(StrategyCoreResolver):
         return {
             "crvTokenGauge": strategy.crvTokenGauge(),
             "curvePool": strategy.CURVE_POOL(),
-            "amWBTC": "0x5c2ed810328349100A66B82b78a1791B101C9D61" # AAVE WBTC Lending Pool
+            "amWBTC": "0x5c2ed810328349100A66B82b78a1791B101C9D61",  # AAVE WBTC Lending Pool
         }

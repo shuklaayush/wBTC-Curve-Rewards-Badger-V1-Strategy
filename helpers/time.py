@@ -1,5 +1,6 @@
 def hours(hours):
-  return int(hours * 3600.0)
+    return int(hours * 3600.0)
+
 
 def days(days):
-  return int(days * 86400.0)
+    return int(days * 86400.0)

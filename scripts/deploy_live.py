@@ -20,7 +20,7 @@ def deploy():
     """
     Deploys, vault, controller and strats and wires them up for you to test
     """
-    deployer = accounts.load('ayush')
+    deployer = accounts.load("ayush")
 
     strategist = deployer
     keeper = deployer
@@ -29,7 +29,9 @@ def deploy():
     governance = accounts.at(BADGER_DEV_MULTISIG, force=True)
 
     controller = Controller.deploy({"from": deployer})
-    controller.initialize(BADGER_DEV_MULTISIG, strategist, keeper, BADGER_DEV_MULTISIG)
+    controller.initialize(
+        BADGER_DEV_MULTISIG, strategist, keeper, BADGER_DEV_MULTISIG, {"from": deployer}
+    )
 
     sett = SettV3.deploy({"from": deployer})
     sett.initialize(
@@ -41,10 +43,11 @@ def deploy():
         False,
         "prefix",
         "PREFIX",
+        {"from": deployer},
     )
 
     sett.unpause({"from": governance})
-    controller.setVault(WANT, sett)
+    controller.setVault(WANT, sett, {"from": deployer})
 
     ## Start up Strategy
     strategy = MyStrategy.deploy({"from": deployer})
@@ -57,6 +60,7 @@ def deploy():
         PROTECTED_TOKENS,
         FEES,
         PRICE_FEEDS,
+        {"from": deployer},
     )
 
     ## Wire up Controller to Strart

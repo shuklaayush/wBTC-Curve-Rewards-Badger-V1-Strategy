@@ -2,49 +2,47 @@ from brownie import *
 from helpers.constants import MaxUint256
 from helpers.time import hours
 
+
 def test_are_you_trying(deployer, sett, strategy, want):
-  """
+    """
     Verifies that you set up the Strategy properly
-  """
-  # Setup
-  startingBalance = want.balanceOf(deployer)
-  
-  depositAmount = startingBalance // 2
-  assert startingBalance >= depositAmount
-  assert startingBalance >= 0
-  # End Setup
+    """
+    # Setup
+    startingBalance = want.balanceOf(deployer)
 
-  # Deposit
-  assert want.balanceOf(sett) == 0
+    depositAmount = startingBalance // 2
+    assert startingBalance >= depositAmount
+    assert startingBalance >= 0
+    # End Setup
 
-  want.approve(sett, MaxUint256, {"from": deployer})
-  sett.deposit(depositAmount, {"from": deployer})
+    # Deposit
+    assert want.balanceOf(sett) == 0
 
-  available = sett.available()
-  assert available > 0 
+    want.approve(sett, MaxUint256, {"from": deployer})
+    sett.deposit(depositAmount, {"from": deployer})
 
-  sett.earn({"from": deployer})
+    available = sett.available()
+    assert available > 0
 
-  chain.mine(10000) # Mine so we get some interest
-  chain.sleep(hours(2)) # Sleep until rewards are claimable
+    sett.earn({"from": deployer})
 
-  ## TEST 1: Does the want get used in any way?
-  assert want.balanceOf(sett) == depositAmount - available
+    chain.mine(10000)  # Mine so we get some interest
+    chain.sleep(hours(2))  # Sleep until rewards are claimable
 
-  # Did the strategy do something with the asset?
-  assert want.balanceOf(strategy) < available
+    ## TEST 1: Does the want get used in any way?
+    assert want.balanceOf(sett) == depositAmount - available
 
-  # Use this if it should invest all
-  # assert want.balanceOf(strategy) == 0
+    # Did the strategy do something with the asset?
+    assert want.balanceOf(strategy) < available
 
-  # Change to this if the strat is supposed to hodl and do nothing
-  #assert strategy.balanceOf(want) = depositAmount
+    # Use this if it should invest all
+    # assert want.balanceOf(strategy) == 0
 
-  ## TEST 2: Is the Harvest profitable?
-  harvest = strategy.harvest({"from": deployer})
-  event = harvest.events["Harvest"]
-  # If it doesn't print, we don't want it
-  assert event["harvested"] > 0
+    # Change to this if the strat is supposed to hodl and do nothing
+    # assert strategy.balanceOf(want) = depositAmount
 
-
-  
+    ## TEST 2: Is the Harvest profitable?
+    harvest = strategy.harvest({"from": deployer})
+    event = harvest.events["Harvest"]
+    # If it doesn't print, we don't want it
+    assert event["harvested"] > 0

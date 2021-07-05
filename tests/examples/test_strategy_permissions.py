@@ -4,6 +4,7 @@ from helpers.constants import MaxUint256, AddressZero
 from helpers.SnapshotManager import SnapshotManager
 from helpers.time import hours
 
+
 def state_setup(deployer, sett, controller, strategy, want):
     settKeeper = accounts.at(sett.keeper(), force=True)
     strategyKeeper = accounts.at(strategy.keeper(), force=True)
@@ -98,7 +99,6 @@ def test_strategy_action_permissions(deployer, sett, controller, strategy, want)
             strategy.withdrawOther(controller, {"from": actor})
 
 
-
 def test_strategy_config_permissions(strategy):
     randomUser = accounts[6]
 
@@ -139,14 +139,12 @@ def test_strategy_config_permissions(strategy):
     with brownie.reverts("onlyGovernance"):
         strategy.setController(AddressZero, {"from": randomUser})
 
-
     # Harvest:
     strategy.setPerformanceFeeGovernance(0, {"from": governance})
     assert strategy.performanceFeeGovernance() == 0
 
     strategy.setPerformanceFeeStrategist(0, {"from": governance})
     assert strategy.performanceFeeStrategist() == 0
-    
 
     with brownie.reverts("onlyGovernance"):
         strategy.setPerformanceFeeGovernance(0, {"from": randomUser})
@@ -302,9 +300,8 @@ def test_sett_config_permissions(deployer, sett, controller, strategy, want):
     assert sett.keeper() == validActor
 
 
-
 def test_sett_earn_permissions(deployer, sett, controller, strategy, want):
-    # Setup
+    #  Setup
     state_setup(deployer, sett, controller, strategy, want)
     randomUser = accounts[8]
     assert sett.strategist() == AddressZero
