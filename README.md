@@ -1,40 +1,49 @@
-# Badger Strategy V1 Brownie Mix
+# wBTC Curve Rewards Badger V1 Strategy
 
-If KeyError: 'polygon-main-fork' => rm -r ~/.brownie
-Make sure master branch of brownie is installed.
+Video: https://www.youtube.com/watch?v=XXX
 
-- Video Introduction: https://youtu.be/FVbhgPYW_D0
+This strategy will deposit wBTC on [Polygon Curve ren pool](https://polygon.curve.fi/ren) and stake the received btcCRV tokens in the Curve Liquidity Gauge to earn interest and CRV/wMATIC rewards.
+It will then claim the rewards, swap them into wBTC and compound the amount deposited.
 
-- Example Project: https://github.com/Badger-Finance/wBTC-AAVE-Rewards-Farm-Badger-V1-Strategy
-- Full Project Walkthrough: https://www.youtube.com/watch?v=lTb0RFJJx2k
-- 1-1 Mentoring (Valid throughout HackMoney and Gitcoin Round 10): https://calendly.com/alex-entreprenerd/badger-hackmoney-1-1
+The strategy uses [Chainlink price feeds](https://docs.chain.link/docs/matic-addresses) to determine the current price of CRV and wMATIC tokens for swapping. This prevents front-running attacks.
 
-## What you'll find here
+The swapping is done using [Sushi](https://sushi.com) through the CRV/wMATIC => wETH => wBTC path to ensure sufficient liquidity.
 
-- Basic Solidity Smart Contract for creating your own Badger Strategy ([`contracts/MyStrategy.sol`](contracts/MyStrategy.sol))
+## Functions
+### Deposit
+Deposit funds in the Curve Lending Pool and stake LP tokens in the Liquidity Gauge so that we earn interest as well as rewards.
 
-- Interfaces for some of the most used DeFi protocols on ethereum mainnet. ([`interfaces`](interfaces))
-- Dependencies for OpenZeppelin and other libraries. ([`deps`](deps))
+### Withdraw
+Unstake some Curve Liquidity Gauge tokens and liquidate the resultant LP tokens into wBTC if the amount of wBTC required is more than the balance of the strategy.
 
-- Sample test suite that runs on mainnet fork. ([`tests`](tests))
+### Harvest
+Harvest CRV and wMATIC, and swap them into wBTC through Sushi.
 
-This mix is configured for use with [Ganache](https://github.com/trufflesuite/ganache-cli) on a [forked mainnet](https://eth-brownie.readthedocs.io/en/stable/network-management.html#using-a-forked-development-network).
+### Tend
+If there's any wBTC in the strategy, deposit it in the pool.
+
+## Expected Yield
+At the time of writing, the expected yields are:
+* Base APY of wBTC ren pool on Curve (1.16%)
+* Rewards on the wBTC Deposit:
+  * CRV rewards (4.67%)
+  * wMATIC rewards (7.50%)
+
+Giving a total expected yield of around 13.33% APY.
 
 ## Installation and Setup
 
-1. Use this code by clicking on Use This Template
+1. Clone the repository.
 
-2. Download the code with ```git clone URL_FROM_GITHUB```
+2. Install [Ganache-CLI](https://github.com/trufflesuite/ganache-cli).
 
-3. [Install Brownie](https://eth-brownie.readthedocs.io/en/stable/install.html) & [Ganache-CLI](https://github.com/trufflesuite/ganache-cli), if you haven't already.
+3. Copy the `.env.example` file and rename it to `.env`.
 
-4. Copy the `.env.example` file, and rename it to `.env`
+4. Sign up on [Infura](https://infura.io/) and generate an API key. Store it in `WEB3_INFURA_PROJECT_ID` environment variable. Go to Change Plan from Infura dashboard and add Polygon PoS network add-on (it's free as of now).
 
-5. Sign up for [Infura](https://infura.io/) and generate an API key. Store it in the `WEB3_INFURA_PROJECT_ID` environment variable.
+5. Sign up on [PolygonScan](https://polygonscan.com) and generate an API key. This is required for fetching source code of Polygon mainnet contracts that we will be interacting with. Store the API key in `POLYGONSCAN_TOKEN` environment variable.
 
-6. Sign up for [Etherscan](www.etherscan.io) and generate an API key. This is required for fetching source codes of the mainnet contracts we will be interacting with. Store the API key in the `ETHERSCAN_TOKEN` environment variable.
-
-7. Install the dependencies in the package
+6. Install dependencies:
 ```
 ## Javascript dependencies
 npm i
@@ -46,172 +55,40 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Basic Use
+## Contracts
 
-To deploy the demo Badger Strategy in a development environment:
+Curve ren pool: [0xC2d95EEF97Ec6C17551d45e77B590dc1F9117C67](https://polygonscan.com/address/0xc2d95eef97ec6c17551d45e77b590dc1f9117c67#code)
 
-1. Open the Brownie console. This automatically launches Ganache on a forked mainnet.
+Sushi Router: [0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506](https://polygonscan.com/address/0x1b02da8cb0d097eb8d57a175b88c7d8b47997506#code)
 
-```bash
-  brownie console
-```
+Chainlink CRV-ETH price feed: [0x1CF68C76803c9A415bE301f50E82e44c64B7F1D4](https://polygonscan.com/address/0x1cf68c76803c9a415be301f50e82e44c64b7f1d4#code)
 
-2. Run Scripts for Deployment
-```
-  brownie run deploy
-```
+Chainlink wBTC-ETH price feed: [0xA338e0492B2F944E9F8C0653D3AD1484f2657a37](https://polygonscan.com/address/0xa338e0492b2f944e9f8c0653d3ad1484f2657a37#code)
 
-Deployment will set up a Vault, Controller and deploy your strategy
-
-3. Run the test deployment in the console and interact with it
-```python
-  brownie console
-  deployed = run("deploy")
-
-  ## Takes a minute or so
-  Transaction sent: 0xa0009814d5bcd05130ad0a07a894a1add8aa3967658296303ea1f8eceac374a9
-  Gas price: 0.0 gwei   Gas limit: 12000000   Nonce: 9
-  UniswapV2Router02.swapExactETHForTokens confirmed - Block: 12614073   Gas used: 88626 (0.74%)
-
-  ## Now you can interact with the contracts via the console
-  >>> deployed
-  {
-      'controller': 0x602C71e4DAC47a042Ee7f46E0aee17F94A3bA0B6,
-      'deployer': 0x66aB6D9362d4F35596279692F0251Db635165871,
-      'lpComponent': 0x028171bCA77440897B824Ca71D1c56caC55b68A3,
-      'rewardToken': 0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9,
-      'sett': 0x6951b5Bd815043E3F842c1b026b0Fa888Cc2DD85,
-      'strategy': 0x9E4c14403d7d9A8A782044E86a93CAE09D7B2ac9,
-      'vault': 0x6951b5Bd815043E3F842c1b026b0Fa888Cc2DD85,
-      'want': 0x6B175474E89094C44Da98b954EedeAC495271d0F
-  }
-  >>>
-
-  ## Deploy also uniswaps want to the deployer (accounts[0]), so you have funds to play with!
-  >>> deployed.want.balanceOf(a[0])
-  240545908911436022026
-
-```
-
-## Adding Configuration
-
-To ship a valid strategy, that will be evaluated to deploy on mainnet, with potentially $100M + in TVL, you need to:
-1. Add custom config in `/config/__init__.py`
-2. Write the Strategy Code in MyStrategy.sol
-3. Customize the StrategyResolver in `/config/StrategyResolver.py` so that snapshot testing can verify that operations happened correctly
-4. Write any extra test to confirm that the strategy is working properly
-
-## Add a custom want configuration
-Most strategies have a:
-* **want** the token you want to increase the balance of
-* **lpComponent** the token representing how much you deposited in the yield source
-* **reward** the token you are farming, that you'll swap into **want**
-
-Set these up in `/config/__init__.py` this mix will automatically be set up for testing and deploying after you do so
-
-## Implementing Strategy Logic
-
-[`contracts/MyStrategy.sol`](contracts/MyStrategy.sol) is where you implement your own logic for your strategy. In particular:
-
-* Customize the `initialize` Method
-* Set a name in `MyStrategy.getName()`
-* Set a version in `MyStrategy.version()`
-* Write a way to calculate the want invested in `MyStrategy.balanceOfPool()`
-* Write a method that returns true if the Strategy should be tended in `MyStrategy.isTendable()`
-* Set a version in `MyStrategy.version()`
-* Invest your want tokens via `Strategy._deposit()`.
-* Take profits and repay debt via `Strategy.harvest()`.
-* Unwind enough of your position to payback withdrawals via `Strategy._withdrawSome()`.
-* Unwind all of your positions via `Strategy._withdrawAll()`.
-* Rebalance the Strategy positions via `Strategy.tend()`.
-* Make a list of all position tokens that should be protected against movements via `Strategy.protectedTokens()`.
-
-## Specifying checks for ordinary operations in config/StrategyResolver
-In order to snapshot certain balances, we use the Snapshot manager.
-This class helps with verifying that ordinary procedures (deposit, withdraw, harvest), happened correctly.
-
-See `/helpers/StrategyCoreResolver.py` for the base resolver that all strategies use
-Edit `/config/StrategyResolver.py` to specify and verify how an ordinary harvest should behave
-
-### StrategyResolver
-
-* Add Contract to check balances for in `get_strategy_destinations` (e.g. deposit pool, gauge, lpTokens)
-* Write `confirm_harvest` to verify that the harvest was profitable
-* Write `confirm_tend` to verify that tending will properly rebalance the strategy
-* Specify custom checks for ordinary deposits, withdrawals and calls to `earn` by setting up `hook_after_confirm_withdraw`, `hook_after_confirm_deposit`, `hook_after_earn`
-
-## Add your custom testing
-Check the various tests under `/tests`
-The file `/tests/test_custom` is already set up for you to write custom tests there
-See example tests in `/tests/examples`
-All of the tests need to pass!
-If a test doesn't pass, you better have a great reason for it!
-
-## Testing
-
-To run the tests:
+## Notes
+A couple of extra tests have been added to [`tests/test_custom.py`](tests/test_custom.py) to test reward claiming and price feeds (or absence of price feeds). A few original tests have been slightly modified to account for peculiarities of Curve contracts. Run tests using:
 
 ```
 brownie test
 ```
 
+### Profitability while testing locally
+The Curve reward contracts are implemented such that Liquidity Gauge boosted rewards are reset every week. While testing locally, this would result in rewards becoming zero after a few days (if you're using Brownie's `chain.sleep(days)`). There's a similar issue with the Base APY rewards on Curve. The Base APY reward is determined by the virtual price of the Curve LP token (see `get_virtual_price()`) which acts as an oracle. Again, this value won't increase just by doing `chain.sleep(...)` locally.
 
-## Debugging Failed Transactions
+Hence, while testing locally, let's say you deposit 1wBTC into the strategy, harvest/tend daily by using `chain.sleep(days(1))` and then withdraw a few weeks later, then the value that you'll receive might be < 1wBTC. This is because, locally, Base APY is 0 and token rewards become 0 after a few days (also because there's a 0.75% withdrawal fee). In the real world/Mainnet, the strategy should be profitable and if you follow the same steps, your total balance after withdrawal should be > 1wBTC since the above mentioned issues won't be present.
 
-Use the `--interactive` flag to open a console immediatly after each failing test:
+### Removed checks
 
-```
-brownie test --interactive
-```
+[This check](https://github.com/Badger-Finance/badger-strategy-mix-v1/blob/main/helpers/StrategyCoreResolver.py#L226-L235) from the original template has been removed since it's not relevant for this strategy. Essentially, this check says withdrawals should first use any free wBTC balance in the vault/strategy and hence, balance of wBTC in the vault/strategy should reduce. This makes sense for strategies where the exchange rate between LP token and want token is known exactly (eg. in AAVE, wBTC-amWBTC is 1:1 pegged) since you know how many LP tokens to liquidate for the required amount of want. Hence, there won't be any extra leftover want remaining in the strategy after withdrawal.
 
-Within the console, transaction data is available in the [`history`](https://eth-brownie.readthedocs.io/en/stable/api-network.html#txhistory) container:
+However, since this strategy uses Curve pools for which the exact exchange rate between the btcCRV token and wBTC is unknown and can only be estimated using `get_virtual_price()`*, there's a possibility of liquidating some extra wBTC. This extra wBTC would remain leftover in the strategy after withdrawal.
 
-```python
->>> history
-[<Transaction '0x50f41e2a3c3f44e5d57ae294a8f872f7b97de0cb79b2a4f43cf9f2b6bac61fb4'>,
- <Transaction '0xb05a87885790b579982983e7079d811c1e269b2c678d99ecb0a3a5104a666138'>]
-```
-
-Examine the [`TransactionReceipt`](https://eth-brownie.readthedocs.io/en/stable/api-network.html#transactionreceipt) for the failed test to determine what went wrong. For example, to view a traceback:
-
-```python
->>> tx = history[-1]
->>> tx.traceback()
-```
-
-To view a tree map of how the transaction executed:
-
-```python
->>> tx.call_trace()
-```
-
-See the [Brownie documentation](https://eth-brownie.readthedocs.io/en/stable/core-transactions.html) for more detailed information on debugging failed transactions.
-
-
-## Deployment
-
-When you are finished testing and ready to deploy to the mainnet:
-
-1. [Import a keystore](https://eth-brownie.readthedocs.io/en/stable/account-management.html#importing-from-a-private-key) into Brownie for the account you wish to deploy from.
-2. Run [`scripts/deploy.py`](scripts/deploy.py) with the following command
-
-```bash
-$ brownie run deployment --network mainnet
-```
-
-You will be prompted to enter your keystore password, and then the contract will be deployed.
-
+\* An alternative is to use `calc_withdraw_one_coin(...)` to get the exact amount of wBTC that one would receive after liquidating, but this is susceptible to front-running attacks and hence, not used.
 
 ## Known issues
+### KeyError: 'polygon-main-fork'
 
-### No access to archive state errors
+Make sure you're using [this fork](https://github.com/shuklaayush/brownie) of Brownie as mentioned in `requirements.txt` (at least, until [this PR](https://github.com/eth-brownie/brownie/pull/1135) is merged). This fixes Polygon mainnet forking.
 
-If you are using Ganache to fork a network, then you may have issues with the blockchain archive state every 30 minutes. This is due to your node provider (i.e. Infura) only allowing free users access to 30 minutes of archive state. To solve this, upgrade to a paid plan, or simply restart your ganache instance and redploy your contracts.
-
-# Resources
-- Example Strategy https://github.com/Badger-Finance/wBTC-AAVE-Rewards-Farm-Badger-V1-Strategy
-- Badger Builders Discord https://discord.gg/Tf2PucrXcE
-- Badger [Discord channel](https://discord.gg/phbqWTCjXU)
-- Yearn [Discord channel](https://discord.com/invite/6PNv2nF/)
-- Brownie [Gitter channel](https://gitter.im/eth-brownie/community)
-- Alex The Entreprenerd on [Twitter](https://twitter.com/GalloDaSballo)
+If it still doesn't work, try removing the local Brownie config folder and running again
+```rm -r ~/.brownie```
