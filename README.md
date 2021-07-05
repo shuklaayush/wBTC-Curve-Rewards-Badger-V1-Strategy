@@ -11,7 +11,7 @@ The strategy uses [Chainlink price feeds](https://docs.chain.link/docs/matic-add
 
 The swapping is done using [Sushi](https://sushi.com) through the CRV/wMATIC => wETH => wBTC path to ensure sufficient liquidity.
 
-![Chart](https://user-images.githubusercontent.com/27727946/124488648-b5057500-ddcd-11eb-9d10-ab3eb2b08c7a.png)
+![Chart](https://user-images.githubusercontent.com/27727946/124519767-df742400-de07-11eb-9a4c-c3682d5109d2.png)
 
 ## Functions
 ### Deposit
@@ -88,12 +88,18 @@ However, since this strategy uses Curve pools for which the exact exchange rate 
 \* An alternative is to use `calc_withdraw_one_coin(...)` to get the exact amount of wBTC that one would receive after liquidating, but this is susceptible to front-running attacks and hence, not used.
 
 ## Contracts
+The following contracts have been deployed on Polygon Mainnet:
+* Strategy: [0xEFF7F97a5A25F20690ba9b2642A86Be601692D36](https://polygonscan.com/address/0xeff7f97a5a25f20690ba9b2642a86be601692d36)
+* SettV3: [0xb7873E3Db34b27164C0D99Ae7F1F31A258E012D1](https://polygonscan.com/address/0xb7873e3db34b27164c0d99ae7f1f31a258e012d1)
+* Controller: [0x6B44919746D33B7565428878CfbF33dE029A6999](https://polygonscan.com/address/0x6b44919746d33b7565428878cfbf33de029a6999)
 
-This strategy interacts with the following contracts on Polygon Mainnet:
+This strategy interacts with the following additional contracts:
 * Curve ren pool: [0xC2d95EEF97Ec6C17551d45e77B590dc1F9117C67](https://polygonscan.com/address/0xc2d95eef97ec6c17551d45e77b590dc1f9117c67#code)
 * Sushi Router: [0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506](https://polygonscan.com/address/0x1b02da8cb0d097eb8d57a175b88c7d8b47997506#code)
 * Chainlink CRV-ETH price feed: [0x1CF68C76803c9A415bE301f50E82e44c64B7F1D4](https://polygonscan.com/address/0x1cf68c76803c9a415be301f50e82e44c64b7f1d4#code)
+* Chainlink wMATIC-ETH price feed: [0x327e23A4855b6F663a28c5161541d69Af8973302](https://polygonscan.com/address/0x327e23a4855b6f663a28c5161541d69af8973302#code)
 * Chainlink wBTC-ETH price feed: [0xA338e0492B2F944E9F8C0653D3AD1484f2657a37](https://polygonscan.com/address/0xa338e0492b2f944e9f8c0653d3ad1484f2657a37#code)
+
 
 ## Known issues
 ### KeyError: 'polygon-main-fork'
