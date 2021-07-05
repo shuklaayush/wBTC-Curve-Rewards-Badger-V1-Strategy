@@ -29,29 +29,27 @@ contract MyStrategy is BaseStrategy {
     address public crvTokenGauge; // Token we provide liquidity with
     address public reward; // Token we farm and swap to want / crvTokenGauge
 
-    uint256 public precisionDiv;
-    mapping(address => address) public priceFeeds;
+    uint256 public precisionDiv; // Want might have less than 18 decimals
+    mapping(address => address) public priceFeeds; // Chainlink price feeds
 
     address public constant CURVE_POOL =
-        0xC2d95EEF97Ec6C17551d45e77B590dc1F9117C67;
-    address public constant ROUTER = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506; // SushiSwap Router
+        0xC2d95EEF97Ec6C17551d45e77B590dc1F9117C67; // Curve Lending Pool
+    address public constant ROUTER = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506; // Sushi Router
 
-    address public constant WETH_TOKEN =
-        0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619;
     address public constant WMATIC_TOKEN =
         0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
+    address public constant WETH_TOKEN =
+        0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619;
 
     address public constant MATIC_ETH_PRICE =
-        0x327e23A4855b6F663a28c5161541d69Af8973302;
+        0x327e23A4855b6F663a28c5161541d69Af8973302; // MATIC-ETH price feed
 
-    // Max number of tokens given as reward in curve pool
+    // Max number of tokens given as reward in Curve Liquidity Gauge
     uint256 public constant MAX_REWARDS = 8;
 
-    uint256 public constant MAX_BPS = 10000;
-
-    // Slippage tolerances for the price feed
-    uint256 public constant CURVE_SLIPPAGE_TOLERANCE = 100;
-    uint256 public constant SWAP_SLIPPAGE_TOLERANCE = 500;
+    // Slippage tolerances (in basis points)
+    uint256 public constant CURVE_SLIPPAGE_TOLERANCE = 100; // 1% for Curve LP token using virtual price
+    uint256 public constant SWAP_SLIPPAGE_TOLERANCE = 500; // 5% for swaps using Chainlink price feeds
 
     function initialize(
         address _governance,
@@ -85,11 +83,14 @@ contract MyStrategy is BaseStrategy {
         priceFeeds[reward] = _priceFeeds[1];
         priceFeeds[WMATIC_TOKEN] = MATIC_ETH_PRICE;
 
+        // @dev Store precision divisor to account for fewer than 18 decimals
         uint256 wantDecimals = IERC20MetadataUpgradeable(want).decimals();
         precisionDiv = 10**(18 - wantDecimals);
 
         /// @dev do one off approvals here
+        // Curve Lending Pool can transfer want tokens
         IERC20Upgradeable(want).safeApprove(CURVE_POOL, type(uint256).max);
+        // Curve Liqidity Gauge can transfer Curve LP tokens
         address crvToken = IRewardsOnlyGauge(crvTokenGauge).lp_token();
         IERC20Upgradeable(crvToken).safeApprove(
             crvTokenGauge,
@@ -111,12 +112,12 @@ contract MyStrategy is BaseStrategy {
 
     /// @dev Balance of want currently held in strategy positions
     function balanceOfPool() public view override returns (uint256) {
-        return _crvTokenGaugeToWant(_balanceOfcrvTokenGauge());
+        return _crvTokenToWant(_balanceOfcrvTokenGauge()); // Estimate using virtual price of crvToken (LP token)
     }
 
     /// @dev Returns true if this strategy requires tending
     function isTendable() public view override returns (bool) {
-        return balanceOfWant() > 0;
+        return balanceOfWant() > 0; // Tendable if contract has some want tokens
     }
 
     // @dev These are the tokens that cannot be moved except by the vault
@@ -126,10 +127,11 @@ contract MyStrategy is BaseStrategy {
         override
         returns (address[] memory)
     {
-        address[] memory protectedTokens = new address[](3);
+        address[] memory protectedTokens = new address[](4);
         protectedTokens[0] = want;
         protectedTokens[1] = crvTokenGauge;
         protectedTokens[2] = reward;
+        protectedTokens[3] = WMATIC_TOKEN;
         return protectedTokens;
     }
 
@@ -164,29 +166,31 @@ contract MyStrategy is BaseStrategy {
     /// @notice When this function is called, the controller has already sent want to this
     /// @notice Just get the current balance and then invest accordingly
     function _deposit(uint256 _amount) internal override {
-        // Deposit wBTC
-        // crvTokenGauge and wBTC are not pegged 1:1 (exchange rate changes like cTokens)
-        uint256 expectedcrvTokenGauge = _wantTocrvTokenGauge(_amount);
+        // Expected crvToken (LP tokens) based on virtual price of LP tokens
+        uint256 expectedcrvToken = _wantTocrvToken(_amount);
+        // Deposit want tokens
         uint256 depositedAmount =
             IStableSwapREN(CURVE_POOL).add_liquidity(
                 [_amount, 0],
                 _calcMinAmountFromSlippage(
-                    expectedcrvTokenGauge,
+                    expectedcrvToken,
                     CURVE_SLIPPAGE_TOLERANCE
                 ),
                 true
             );
-        // Stake btcCRV LP in Curve
+        // Stake crvToken on Liquididty Gauge to earn boosted rewards
         IRewardsOnlyGauge(crvTokenGauge).deposit(depositedAmount);
     }
 
     /// @dev utility function to withdraw everything for migration
     function _withdrawAll() internal override {
+        // Balance of crvToken in contract
         uint256 amount = _balanceOfcrvTokenGauge();
-        // Unstake
+        // Unstake crvToken from Liquidity Gauge
         IRewardsOnlyGauge(crvTokenGauge).withdraw(amount);
-        // Withdraw
-        uint256 expectedWant = _crvTokenGaugeToWant(amount);
+        // Expected want tokens based on virtual price of LP tokens
+        uint256 expectedWant = _crvTokenToWant(amount);
+        // Withdraw want tokens
         IStableSwapREN(CURVE_POOL).remove_liquidity_one_coin(
             amount,
             0,
@@ -199,17 +203,18 @@ contract MyStrategy is BaseStrategy {
     function _liquidate(uint256 _amount) internal returns (uint256) {
         uint256 wantBalanceBefore = balanceOfWant();
 
-        // crvTokenGauges required based on virtual price
-        uint256 amountcrvTokenGauge = _wantTocrvTokenGauge(_amount);
+        // Amount of crvToken required to get _amount of want (based on virtual price)
+        uint256 amountcrvTokenGauge = _wantTocrvToken(_amount);
 
+        // Cap amount to maximum available in contract
         if (amountcrvTokenGauge > _balanceOfcrvTokenGauge()) {
             amountcrvTokenGauge = _balanceOfcrvTokenGauge();
-            _amount = _crvTokenGaugeToWant(amountcrvTokenGauge);
+            _amount = _crvTokenToWant(amountcrvTokenGauge);
         }
 
-        // Unstake
+        // Unstake crvToken from Liquidity Gauge
         IRewardsOnlyGauge(crvTokenGauge).withdraw(amountcrvTokenGauge);
-        // Withdraw
+        // Withdraw want tokens
         IStableSwapREN(CURVE_POOL).remove_liquidity_one_coin(
             amountcrvTokenGauge,
             0,
@@ -230,6 +235,7 @@ contract MyStrategy is BaseStrategy {
     {
         uint256 liquidatedAmount;
         if (balanceOfWant() < _amount) {
+            // Liquidate crvTokens if there's not enough want in contract
             liquidatedAmount = _liquidate(_amount.sub(balanceOfWant()));
         }
         return
@@ -242,23 +248,26 @@ contract MyStrategy is BaseStrategy {
 
         uint256 _before = balanceOfWant();
 
-        // Figure out and claim our rewards
+        // Claim rewards from Liquidity Gauge
         IRewardsOnlyGauge(crvTokenGauge).claim_rewards();
 
+        // Iterate over all rewards and swap them into want
         for (uint256 i = 0; i < MAX_REWARDS; i++) {
             address tokenAddress =
-                IRewardsOnlyGauge(crvTokenGauge).reward_tokens(i);
+                IRewardsOnlyGauge(crvTokenGauge).reward_tokens(i); // Reward token address
             if (tokenAddress == address(0)) {
+                // No more rewards left
                 break;
             }
 
             uint256 rewardAmount =
                 IERC20Upgradeable(tokenAddress).balanceOf(address(this));
             if (rewardAmount == 0) {
+                // Skip since no tokens are available
                 continue;
             }
 
-            /// @dev Allowance for SushiSwap
+            // Approve Sushi to spend rewards if not already done so
             if (
                 IERC20Upgradeable(tokenAddress).allowance(
                     address(this),
@@ -271,18 +280,19 @@ contract MyStrategy is BaseStrategy {
                 );
             }
 
-            // Swap token to WETH to WBTC on Sushi
+            // Swap reward token => WETH => want on Sushi
             address[] memory path = new address[](3);
             path[0] = tokenAddress;
             path[1] = WETH_TOKEN;
             path[2] = want;
 
-            uint256 minExpectedWant;
+            uint256 minExpectedWant; // Minimum expected want after swap
+            // Calculate minimum expected want using price feed and slippage factor. If no price feed is
+            // present for this token, expect to get non-zero amount after swap and hope for the best.
             if (
                 priceFeeds[tokenAddress] != address(0) &&
                 priceFeeds[want] != address(0)
             ) {
-                // Use price feed and account for slippage
                 uint256 expectedWant =
                     _tokenToWantFromPriceFeed(rewardAmount, tokenAddress);
                 minExpectedWant = _calcMinAmountFromSlippage(
@@ -290,11 +300,10 @@ contract MyStrategy is BaseStrategy {
                     SWAP_SLIPPAGE_TOLERANCE
                 );
             } else {
-                // No price feed for this token. Expect to get non-zero tokens and hope for the best.
                 // WARNING: SUSCEPTIBLE TO FRONTRUNNING
                 minExpectedWant = 0;
             }
-
+            // Swap reward => WETH => want
             IUniswapV2Router02(ROUTER).swapExactTokensForTokens(
                 rewardAmount,
                 minExpectedWant,
@@ -304,7 +313,7 @@ contract MyStrategy is BaseStrategy {
             );
         }
 
-        uint256 earned = balanceOfWant().sub(_before);
+        uint256 earned = balanceOfWant().sub(_before); // Want earned
 
         /// @notice Keep this in so you get paid!
         (uint256 governancePerformanceFee, uint256 strategistPerformanceFee) =
@@ -316,7 +325,7 @@ contract MyStrategy is BaseStrategy {
         return earned;
     }
 
-    /// @dev Rebalance, Compound or Pay off debt here
+    /// @dev Compound by depositing any remaining want in contract
     function tend() external whenNotPaused {
         _onlyAuthorizedActors();
 
@@ -350,13 +359,13 @@ contract MyStrategy is BaseStrategy {
         );
     }
 
-    /// @dev Calculate minimum output amount expected based on slippage
+    /// @dev Calculate minimum output amount expected based on given slippage
     function _calcMinAmountFromSlippage(uint256 _amount, uint256 _slippage)
         internal
         view
         returns (uint256)
     {
-        return _amount.mul(MAX_BPS.sub(_slippage)).div(MAX_BPS);
+        return _amount.mul(MAX_FEE.sub(_slippage)).div(MAX_FEE);
     }
 
     /// @dev Get the balance of crvTokenGauge in strategy
@@ -364,46 +373,42 @@ contract MyStrategy is BaseStrategy {
         return IERC20Upgradeable(crvTokenGauge).balanceOf(address(this));
     }
 
-    /// @dev Get the virtual price of crvTokenGauge in WBTC
+    /// @dev Get the virtual price of crvToken in want
     function _virtualPrice() internal view returns (uint256) {
         return IStableSwapREN(CURVE_POOL).get_virtual_price();
     }
 
-    /// @dev Converts balance of crvTokenGauge in WBTC
-    function _crvTokenGaugeToWant(uint256 _amount)
-        internal
-        view
-        returns (uint256)
-    {
+    /// @dev Convert _amount of crvToken into want using virtual price
+    function _crvTokenToWant(uint256 _amount) internal view returns (uint256) {
         return _amount.mul(_virtualPrice()).div(1e18).div(precisionDiv);
     }
 
-    /// @dev Converts balance of crvTokenGauge in WBTC
-    function _wantTocrvTokenGauge(uint256 _amount)
-        internal
-        view
-        returns (uint256)
-    {
+    /// @dev Convert _amount of want into crvToken using virtual price
+    function _wantTocrvToken(uint256 _amount) internal view returns (uint256) {
         return _amount.mul(1e18).mul(precisionDiv).div(_virtualPrice());
     }
 
-    /// @dev Get price of want token in ETH from Chainlink
-    function _wantToEth() internal view returns (uint256) {
-        int256 wantToEth =
+    /// @dev Chainlink price feed functions
+    /// TODO: Maybe add a check to see if Chainlink price feed data is recently
+    ///       updated and is not more than a few hours old (i.e. stale)?
+
+    /// @dev Get price of want token in ETH from Chainlink price feed
+    function _ethPerWant() internal view returns (uint256) {
+        int256 ethPerWant =
             AggregatorV2V3Interface(priceFeeds[want]).latestAnswer();
-        return uint256(wantToEth);
+        return uint256(ethPerWant);
     }
 
-    /// @dev Converts balance of token to want using Chainlink price feed
+    /// @dev Convert _amount of token into want using Chainlink price feed
     function _tokenToWantFromPriceFeed(uint256 _amount, address _tokenAddress)
         internal
         view
         returns (uint256)
     {
-        int256 tokenToEth =
+        int256 ethPerToken =
             AggregatorV2V3Interface(priceFeeds[_tokenAddress]).latestAnswer();
         return
-            _amount.mul(uint256(tokenToEth)).div(_wantToEth()).div(
+            _amount.mul(uint256(ethPerToken)).div(_ethPerWant()).div(
                 precisionDiv
             );
     }
